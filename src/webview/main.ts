@@ -1178,6 +1178,9 @@ function buildChrome() {
     tbButton('note', icons.note, t('note'), `${t('editNote')} (F4)`),
     tbButton('task', icons.task, t('task'), t('toggleTask')),
     '<span class="tb-sep"></span>',
+    tbButton('expand-all', icons.expandAll, t('expandAll'), t('expandAll')),
+    tbButton('collapse-all', icons.collapseAll, t('collapseAll'), t('collapseAll')),
+    '<span class="tb-sep"></span>',
     tbButton('source', icons.markdown, t('markdown'), t('openMarkdown')),
     tbButton('format', icons.format, t('format'), t('format')),
   ].join('');
@@ -1194,8 +1197,17 @@ function buildChrome() {
 function updateToolbar() {
   const n = node(S.focus);
   const isRoot = !!n && n === root();
+  // Expand All / Collapse All are greyed out when they would change nothing
+  let anyCollapsed = false;
+  let anyExpanded = false;
+  if (S.doc)
+    walk(root(), (x, _p, d) => {
+      if (d >= 1 && x.children.length) x.collapsed ? (anyCollapsed = true) : (anyExpanded = true);
+    });
   toolbar.querySelectorAll<HTMLButtonElement>('.tb-btn').forEach(b => {
     const act = b.dataset.act;
+    if (act === 'expand-all') b.disabled = !anyCollapsed;
+    if (act === 'collapse-all') b.disabled = !anyExpanded;
     if (act === 'format') b.classList.toggle('on', S.formatOpen);
     if (act === 'topic') b.disabled = !n;
     if (act === 'note') b.classList.toggle('on', !!n?.note);
@@ -1221,6 +1233,10 @@ function toolbarAction(act: string) {
       return S.noteId ? closeNote(true) : openNote(id);
     case 'task':
       return toggleTask(topLevelSelection());
+    case 'expand-all':
+      return setAllFolded(false);
+    case 'collapse-all':
+      return setAllFolded(true);
     case 'source':
       return post({ type: 'openSource' });
     case 'format':

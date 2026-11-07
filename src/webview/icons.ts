@@ -12,6 +12,8 @@ export const icons = {
   task: svg('<rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="m8.5 12.2 2.4 2.4 4.8-5"/>'),
   markdown: svg('<rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M6 15V9l2.5 3L11 9v6M15.5 9v6m0 0-2-2m2 2 2-2"/>'),
   format: svg('<path d="M4 6.5h9M17 6.5h3M4 12h3M11 12h9M4 17.5h7M15 17.5h5"/><circle cx="15" cy="6.5" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="17.5" r="2"/>'),
+  expandAll: svg('<path d="M4 12h16" opacity=".45"/><path d="M12 9V3m-3 3 3-3 3 3M12 15v6m-3-3 3 3 3-3"/>'),
+  collapseAll: svg('<path d="M4 12h16" opacity=".45"/><path d="M12 3v6M9 6l3 3 3-3M12 21v-6m-3 3 3-3 3 3"/>'),
   minus: svg('<path d="M6 12h12"/>'),
   plus: svg('<path d="M12 6v12M6 12h12"/>'),
   fit: svg('<path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/><rect x="8.5" y="9.5" width="7" height="5" rx="1.2"/>'),
