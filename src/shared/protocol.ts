@@ -1,0 +1,30 @@
+import type { Layout, LineStyle } from './model';
+
+export interface MindConfig {
+  defaultLayout: Layout;
+  defaultTheme: string;
+  defaultLineStyle: LineStyle;
+  headingLevels: number;
+  syncSelection: boolean;
+}
+
+export type ToWebview =
+  | { type: 'init'; text: string; baseUri: string | null; fileName: string; config: MindConfig; lang: string; canSaveImages: boolean }
+  | { type: 'update'; text: string }
+  | { type: 'ack'; text: string }
+  | { type: 'config'; config: MindConfig }
+  | { type: 'imageReady'; nodeId: string; src: string }
+  | { type: 'selectLine'; line: number };
+
+export type FromWebview =
+  | { type: 'ready' }
+  | { type: 'edit'; text: string }
+  | { type: 'pickImage'; nodeId: string }
+  | { type: 'saveImage'; nodeId: string; name: string; mime: string; data: string }
+  | { type: 'linkImages'; nodeId: string; uris: string[] }
+  | { type: 'openLink'; href: string }
+  | { type: 'openImage'; src: string }
+  | { type: 'openSource' }
+  | { type: 'cleanupImages' }
+  | { type: 'revealLine'; line: number }
+  | { type: 'notify'; level: 'info' | 'warn' | 'error'; message: string };

@@ -1,0 +1,12 @@
+src/**
+test/**
+out/**
+dev/**
+docs/**
+node_modules/**
+.vscode/**
+.playwright-mcp/**
+esbuild.mjs
+tsconfig.json
+.gitignore
+**/*.map

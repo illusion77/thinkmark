@@ -1,0 +1,209 @@
+{
+  "name": "thinkmark",
+  "displayName": "Thinkmark — Markdown Mind Map",
+  "description": "Edit Markdown files as XMind-style mind maps. The Markdown file stays the source of truth: changes in the map are written back to the text, and changes to the text show up in the map.",
+  "version": "0.1.0",
+  "publisher": "illusion77",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/illusion77/thinkmark.git"
+  },
+  "bugs": {
+    "url": "https://github.com/illusion77/thinkmark/issues"
+  },
+  "homepage": "https://github.com/illusion77/thinkmark#readme",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "mind map",
+    "mindmap",
+    "markdown",
+    "xmind",
+    "outline"
+  ],
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#26334d",
+    "theme": "dark"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "thinkmark.editor",
+        "displayName": "Mind Map (Thinkmark)",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          },
+          {
+            "filenamePattern": "*.markdown"
+          }
+        ],
+        "priority": "option"
+      },
+      {
+        "viewType": "thinkmark.editor.default",
+        "displayName": "Mind Map (Thinkmark)",
+        "selector": [
+          {
+            "filenamePattern": "*.mm.md"
+          },
+          {
+            "filenamePattern": "*.mindmap.md"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "thinkmark.openAsMindMap",
+        "title": "Open as Mind Map",
+        "category": "Thinkmark",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "thinkmark.openToSide",
+        "title": "Open Mind Map to the Side",
+        "category": "Thinkmark",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "thinkmark.openSource",
+        "title": "Open Markdown Source to the Side",
+        "category": "Thinkmark",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "thinkmark.cleanupImages",
+        "title": "Clean Up Unused Images…",
+        "category": "Thinkmark",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "thinkmark.newMindMap",
+        "title": "New Mind Map…",
+        "category": "Thinkmark"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "thinkmark.openToSide",
+          "when": "editorLangId == markdown && !activeCustomEditorId",
+          "group": "navigation"
+        },
+        {
+          "command": "thinkmark.openSource",
+          "when": "activeCustomEditorId == thinkmark.editor || activeCustomEditorId == thinkmark.editor.default",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "thinkmark.openAsMindMap",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation@20"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "thinkmark.openAsMindMap",
+          "when": "resourceExtname == .md || resourceExtname == .markdown"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "thinkmark.openSource",
+          "when": "activeCustomEditorId == thinkmark.editor || activeCustomEditorId == thinkmark.editor.default"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Thinkmark",
+      "properties": {
+        "thinkmark.imageFolder": {
+          "type": "string",
+          "default": "assets",
+          "description": "Folder (relative to the Markdown file) where pasted, dropped or picked images are saved."
+        },
+        "thinkmark.defaultLayout": {
+          "type": "string",
+          "enum": [
+            "map",
+            "right",
+            "left",
+            "down"
+          ],
+          "enumDescriptions": [
+            "Balanced mind map",
+            "Logic chart (right)",
+            "Logic chart (left)",
+            "Org chart (down)"
+          ],
+          "default": "map",
+          "description": "Structure used when the file does not set one in its front matter."
+        },
+        "thinkmark.defaultTheme": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "rainbow",
+            "fresh",
+            "business",
+            "ink",
+            "midnight"
+          ],
+          "default": "auto",
+          "description": "Theme used when the file does not set one. \"auto\" follows VS Code's light/dark theme."
+        },
+        "thinkmark.defaultLineStyle": {
+          "type": "string",
+          "enum": [
+            "curve",
+            "elbow",
+            "straight"
+          ],
+          "default": "curve",
+          "description": "Branch line style used when the file does not set one."
+        },
+        "thinkmark.headingLevels": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 6,
+          "description": "New topics without siblings become headings for the first N levels of the map (the central topic is level 1) and list items below that."
+        },
+        "thinkmark.syncSelection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep the selected topic and the cursor in a Markdown editor shown side by side in sync."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node esbuild.mjs --test && node --test out/test/*.test.js",
+    "package": "node esbuild.mjs --production && vsce package --no-dependencies",
+    "test:vscode": "sh test/vscode/run.sh",
+    "harness": "node esbuild.mjs && echo \"open http://127.0.0.1:8765/dev/harness.html\" && python3 -m http.server 8765 --bind 127.0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

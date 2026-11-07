@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">
+  <rect width="360" height="200" rx="10" fill="#f3f6fb"/>
+  <g font-family="Helvetica, Arial" font-size="13" fill="#26334d" text-anchor="middle">
+    <rect x="20" y="80" width="80" height="40" rx="6" fill="#fff" stroke="#3b7fe6" stroke-width="2"/><text x="60" y="105">Client</text>
+    <rect x="140" y="80" width="80" height="40" rx="6" fill="#fff" stroke="#2fa36b" stroke-width="2"/><text x="180" y="105">API</text>
+    <rect x="260" y="30" width="80" height="40" rx="6" fill="#fff" stroke="#f07d2e" stroke-width="2"/><text x="300" y="55">Cache</text>
+    <rect x="260" y="130" width="80" height="40" rx="6" fill="#fff" stroke="#7c5cd6" stroke-width="2"/><text x="300" y="155">DB</text>
+  </g>
+  <g stroke="#8a94a6" stroke-width="2" fill="none"><path d="M100 100H140M220 100L260 50M220 100L260 150"/></g>
+</svg>

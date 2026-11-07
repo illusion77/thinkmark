@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../media/webview.css">
+<style>
+  #debug { position: fixed; left: 0; bottom: 0; width: 420px; height: 45%; overflow: auto; margin: 0; padding: 8px;
+           font: 11px/1.4 Menlo, monospace; background: rgba(0,0,0,.82); color: #c8f7c5; z-index: 999; display: none; white-space: pre; }
+  body.show-debug #debug { display: block; }
+</style>
+</head>
+<body class="vscode-light">
+<div id="app"></div>
+<pre id="debug"></pre>
+<script>
+  const params = new URLSearchParams(location.search);
+  if (params.get('dark')) document.body.className = 'vscode-dark';
+  if (params.get('debug')) document.body.classList.add('show-debug');
+  window.__msgs = [];
+  window.__doc = '';
+  window.__state = params.get('state') ? JSON.parse(params.get('state')) : undefined;
+  const send = (m) => setTimeout(() => window.dispatchEvent(new MessageEvent('message', { data: m })), 0);
+  const show = () => { document.getElementById('debug').textContent = window.__doc; };
+  window.__external = (text) => { window.__doc = text; show(); send({ type: 'update', text }); };
+  window.acquireVsCodeApi = () => ({
+    postMessage(m) {
+      window.__msgs.push(m);
+      if (m.type === 'ready') {
+        const load = (text) => { window.__doc = text; show(); send({ type: 'init', text, baseUri: new URL('./', location.href).toString(), fileName: 'sample', config: { defaultLayout: params.get('layout') || 'map', defaultTheme: params.get('theme') || 'auto', defaultLineStyle: 'curve', headingLevels: 2, syncSelection: true }, lang: params.get('lang') || 'en', canSaveImages: true }); };
+        if (params.get('empty')) load('');
+        else fetch(params.get('file') || 'sample.md').then(r => r.text()).then(load).catch(() => load(window.__sample || ''));
+      } else if (m.type === 'edit') {
+        window.__doc = m.text; show();
+        send({ type: 'ack', text: m.text });
+      } else if (m.type === 'pickImage') {
+        send({ type: 'imageReady', nodeId: m.nodeId, src: 'assets/architecture.svg' });
+      } else if (m.type === 'saveImage') {
+        send({ type: 'imageReady', nodeId: m.nodeId, src: 'assets/pasted.png' });
+      }
+    },
+    getState() { return window.__state; },
+    setState(s) { window.__state = s; },
+  });
+</script>
+<script src="../media/webview.js"></script>
+</body>
+</html>

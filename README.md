@@ -1,0 +1,192 @@
+<p align="center">
+  <img src="media/icon.png" alt="Thinkmark icon" width="112">
+</p>
+
+<h1 align="center">Thinkmark</h1>
+
+<p align="center">Edit Markdown files as XMind-style mind maps in VS Code.</p>
+
+The `.md` file stays the source of truth. Every change you make in the map (adding, renaming, moving or deleting topics, images, notes, links, layout) is written back to the Markdown as a normal VS Code edit, so undo, redo, dirty state and save all work as usual. Every change you make to the text shows up in the map right away.
+
+![Mind map](docs/images/mind-map.png)
+
+## Features
+
+- **Markdown in, Markdown out.** Headings and lists become topics; paragraphs, code blocks and tables become topic notes. Editing a topic changes only that topic's line, and your heading levels, list markers and indentation are kept.
+- **Keyboard-first editing.** `Tab` adds a subtopic, `Enter` adds a sibling, typing starts editing (IME friendly), arrow keys move around the map.
+- **Drag and drop** with explicit placement: drop above, below, as a subtopic or as a new parent.
+- **Box selection** and group actions: move, delete, copy, fold, link or tick several topics at once.
+- **Images** inside topics: insert from a file, paste a screenshot, drop a file, resize by dragging.
+- **Notes, task checkboxes, links** (`Cmd+K`) and inline formatting (bold, italic, code, links).
+- **Structures:** mind map, logic chart (right or left) and org chart. **Themes:** Rainbow, Fresh, Business, Ink, Midnight, or Auto to follow VS Code's light / dark theme. Curved, elbow or straight branch lines.
+- **Side-by-side source:** the selected topic and the cursor in the Markdown editor follow each other.
+- English and Simplified Chinese interface.
+
+<p>
+  <img src="docs/images/logic-chart.png" alt="Logic chart with the Fresh theme" width="49%">
+  <img src="docs/images/dark.png" alt="Midnight theme" width="49%">
+</p>
+
+## Installation
+
+Install **Thinkmark** from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=illusion77.thinkmark): search for "Thinkmark" in the Extensions view, or run
+
+```sh
+code --install-extension illusion77.thinkmark
+```
+
+Requires VS Code 1.80 or newer.
+
+To build it from source instead:
+
+```sh
+git clone https://github.com/illusion77/thinkmark.git
+cd thinkmark
+npm install
+npm run package
+code --install-extension thinkmark-0.1.0.vsix
+```
+
+## Usage
+
+- Click the mind map icon in the title bar of a Markdown editor to open the map beside the text.
+- Or right-click a `.md` file and choose **Open as Mind Map**, or run **Thinkmark: Open as Mind Map** from the Command Palette.
+- **Thinkmark: New Mind Map…** creates a new file from a template.
+- Files named `*.mm.md` or `*.mindmap.md` open as a mind map by default.
+- Click **Markdown** in the toolbar to show the source next to the map.
+
+## Markdown format
+
+| Markdown | Mind map |
+| --- | --- |
+| The only top-level heading | Central topic |
+| Several top-level headings, or none | The central topic is the file name |
+| Sub-headings | Subtopics, nested by level |
+| List items, nested by indentation | Subtopics of the heading or item above |
+| Paragraphs, code blocks, tables, quotes | The topic's note |
+| The first image on a topic line | Topic image; an optional width is stored after the alt text, e.g. `architecture\|240` |
+| A topic line that is a single Markdown link | Topic link |
+| `- [ ] task` / `- [x] done` | Task checkbox |
+| `<br>` | Line break inside a topic |
+
+```markdown
+# Design a URL Shortener
+
+## Requirements
+
+- Functional
+  - [x] Custom aliases
+  - [ ] Expiration
+
+## High-level Design ![architecture|240](assets/architecture.png)
+
+## Trade-offs <!-- mindmap: left -->
+
+Consistency vs availability for the alias namespace.
+
+- SQL vs NoSQL
+```
+
+New topics follow the style of their siblings. A topic without siblings becomes a heading for the first two levels of the map and a list item below that (setting `thinkmark.headingLevels`).
+
+In the mind map structure, main topics are placed on the right of the central topic. A main topic you move to the left is marked with `<!-- mindmap: left -->`, which Markdown previews do not show.
+
+Structure, theme and line style chosen in the Format panel are saved in the file's front matter:
+
+```yaml
+---
+mindmap:
+  layout: right      # map | right | left | down
+  theme: fresh       # auto | rainbow | fresh | business | ink | midnight
+  lineStyle: elbow   # curve | elbow | straight
+---
+```
+
+## Editing
+
+Shortcuts are shown for macOS. On Windows and Linux, use `Ctrl` instead of `Cmd` and `Alt` instead of `Option`.
+
+| Action | Shortcut |
+| --- | --- |
+| Insert subtopic | `Tab` |
+| Insert topic after / before | `Enter` / `Shift+Enter` |
+| Insert parent topic | `Cmd+Enter` |
+| Edit text | `F2`, `Space`, double-click, or start typing |
+| New line inside a topic | `Shift+Enter` while editing |
+| Finish / cancel editing | `Enter` / `Esc` |
+| Delete | `Delete` / `Backspace` |
+| Move among siblings | `Option+↑` / `Option+↓` |
+| Navigate | Arrow keys; `Shift+Tab` goes to the parent, `Home` to the central topic |
+| Select several topics | Drag a box on empty space (`Shift` or `Cmd` adds), `Shift` / `Cmd`-click, `Cmd+A` |
+| Fold / unfold | `Cmd+/` |
+| Link | `Cmd+K` |
+| Note | `F4` |
+| Insert image | `Shift+Cmd+I` |
+| Copy / cut / paste topics | `Cmd+C` / `Cmd+X` / `Cmd+V` (as a Markdown list) |
+| Undo / redo | `Cmd+Z` / `Shift+Cmd+Z` |
+| Zoom | `Cmd+=` / `Cmd+-`, `Cmd+0` for 100%, `Shift+1` or `Shift+Cmd+0` to fit, pinch or `Cmd`+scroll |
+| Pan | Trackpad or mouse wheel, right-drag, `Space`+drag, middle-drag or `Option`+drag |
+
+Right-click a topic, an image, a selection or the background for more commands.
+
+### Drag and drop
+
+Drag a topic near another topic and four arrows appear around it. The highlighted arrow decides where the topic goes, and a placeholder previews the result:
+
+| Arrow | Mind map and logic chart | Org chart |
+| --- | --- | --- |
+| Up | Sibling before | New parent |
+| Down | Sibling after | Subtopic |
+| Pointing away from the central topic | Subtopic | — |
+| Pointing toward the central topic | New parent | — |
+| Left / right | — | Sibling before / after |
+
+Dropping onto the topic itself also makes it a subtopic. Next to the central topic, left and right choose the side of the map. Press `Esc` to cancel.
+
+![Drag and drop](docs/images/drag-drop.png)
+
+### Images
+
+- **Image** in the toolbar picks a file. Files from outside the workspace are copied into an `assets` folder next to the Markdown file (setting `thinkmark.imageFolder`).
+- Paste an image from the clipboard, or drop image files onto a topic (hold `Shift` while dropping from the file manager).
+- Click an image to select it: drag the handle to resize, press `Delete` to remove it from the topic, or right-click for more options. Double-click to open it.
+- Removing an image from a topic leaves the file in place. **Thinkmark: Clean Up Unused Images…** lists the images that no Markdown, HTML or text file in the workspace refers to, and moves the ones you select to the Trash.
+
+### Links
+
+`Cmd+K` opens a link field under the selected topic. Enter a URL or a file path; a domain such as `example.com` gets `https://` added. The topic then shows a link icon, which opens the link when clicked. With several topics selected, the link is added to all of them.
+
+## Settings
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `thinkmark.imageFolder` | `assets` | Folder, relative to the Markdown file, for pasted, dropped and inserted images |
+| `thinkmark.defaultLayout` | `map` | Structure when the file does not set one |
+| `thinkmark.defaultTheme` | `auto` | Theme when the file does not set one |
+| `thinkmark.defaultLineStyle` | `curve` | Branch line style when the file does not set one |
+| `thinkmark.headingLevels` | `2` | Map levels written as headings for new topics without siblings |
+| `thinkmark.syncSelection` | `true` | Keep the selected topic and the cursor in a side-by-side Markdown editor in sync |
+
+## Development
+
+```sh
+npm install
+npm run build          # extension and webview bundles
+npm run watch          # rebuild on change
+npm test               # unit tests (parser, serializer, text diff)
+npm run harness        # the webview in a browser with a mocked VS Code API: dev/harness.html
+npm run test:vscode    # smoke test in an isolated VS Code window (macOS)
+npm run package        # build thinkmark-<version>.vsix
+```
+
+Press `F5` in VS Code to start an Extension Development Host.
+
+Project layout:
+
+- `src/shared/markdown.ts` converts between Markdown and the topic tree.
+- `src/mindmapEditor.ts` is the custom text editor that keeps the document and the webview in sync.
+- `src/webview/` contains the map: layout, branch drawing, themes and interaction.
+
+## License
+
+[MIT](LICENSE)
