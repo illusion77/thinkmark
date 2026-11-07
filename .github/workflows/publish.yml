@@ -1,0 +1,36 @@
+# Publishes to the VS Code Marketplace when a version tag (v1.2.3) is pushed.
+# Auth is Marketplace Trusted Publishing (OIDC): no token stored in the repo.
+# The Marketplace policy must name this file: publish.yml.
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Check tag matches package.json version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run package
+      - run: npx vsce publish --oidc --packagePath "thinkmark-$VERSION.vsix"

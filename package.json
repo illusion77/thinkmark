@@ -196,13 +196,14 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "node esbuild.mjs --test && node --test out/test/*.test.js",
     "package": "node esbuild.mjs --production && vsce package --no-dependencies",
+    "install-local": "npm run package && code --install-extension thinkmark-$npm_package_version.vsix --force",
     "test:vscode": "sh test/vscode/run.sh",
     "harness": "node esbuild.mjs && echo \"open http://127.0.0.1:8765/dev/harness.html\" && python3 -m http.server 8765 --bind 127.0.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.80.0",
-    "@vscode/vsce": "^3.2.1",
+    "@vscode/vsce": "^4.1.0",
     "esbuild": "^0.24.0",
     "typescript": "^5.6.3"
   }
