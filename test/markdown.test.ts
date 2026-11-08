@@ -219,3 +219,21 @@ test('topic links (Cmd+K) are written as [text](url)', () => {
   delete t.root.children[0].link;
   assert.equal(ser(t), `# R\n\n## A\n`);
 });
+
+test('empty topics survive a round trip', () => {
+  const d = parse(`# Root\n\n## A\n\n- a1\n- b1\n  - b11\n`);
+  const a = d.root.children[0];
+  a.text = '';
+  a.children[1].text = '';
+  const out = ser(d);
+  assert.equal(out, `# Root\n\n##\n\n- a1\n-\n  - b11\n`);
+  assert.deepEqual(texts(parse(out).root), { Root: [{ '': ['a1', { '': ['b11'] }] }] });
+});
+
+test('an empty central topic survives a round trip', () => {
+  const d = parse(`# Root\n\n## A\n`);
+  d.root.text = '';
+  const out = ser(d);
+  assert.deepEqual(texts(parse(out).root), { '': ['A'] });
+  assert.equal(ser(parse(out)), out);
+});

@@ -6,6 +6,7 @@ import { icons, layoutIcons } from './icons';
 import { escapeHtml, renderInline } from './inline';
 import { layoutTree, type Box } from './layout';
 import { anchorOut, branchPath, foldPoint, type LineOpts } from './lines';
+import { handleEditKey, recordChange, resetHistory, trackHistory } from './textHistory';
 import { readableOn, resolveTheme, THEMES, withAlpha, type Theme } from './themes';
 
 interface VsApi {
@@ -95,6 +96,7 @@ app.innerHTML = `
 <div id="drop-label"></div>
 <div id="marquee"></div>
 <div id="linkbox" class="card"></div>`;
+trackHistory(app);
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const viewport = $<HTMLDivElement>('viewport');
@@ -686,6 +688,7 @@ function focusEditor() {
 
 function resetEditor() {
   editor.value = '';
+  resetHistory(editor);
   editor.classList.add('sink');
   editor.classList.remove('active');
   editor.removeAttribute('style');
@@ -729,6 +732,8 @@ function beginEdit(id: string, mode: 'select' | 'end' | 'typed', isNew = false) 
   S.editing = { id, original: n.text, isNew, draft: n.text };
   if (mode === 'typed') S.editing.draft = editor.value;
   else editor.value = n.text;
+  // typing over a topic replaces its text; the first undo brings that text back
+  resetHistory(editor, mode === 'typed' ? n.text : undefined);
   editor.classList.remove('sink');
   editor.classList.add('active');
   setSelection([id], !isNew);
@@ -747,7 +752,6 @@ function commitEdit() {
   resetEditor();
   const n = node(ed.id);
   if (!n) return render();
-  if (!v && !n.image) v = ed.original;
   if (v !== n.text || ed.isNew) {
     n.text = v;
     commit([n.id]);
@@ -1071,7 +1075,7 @@ noteEl.addEventListener('keydown', e => {
     e.preventDefault();
     e.stopPropagation();
     closeNote(true);
-  } else if (mod && /^[zya]$/i.test(e.key)) e.stopPropagation();
+  } else if (e.target instanceof HTMLTextAreaElement) handleEditKey(e, e.target, mod);
 });
 
 // ---------------------------------------------------------------- topic links (Cmd+K)
@@ -1173,7 +1177,9 @@ linkEl.addEventListener('keydown', e => {
     e.preventDefault();
     e.stopPropagation();
     closeLinkEditor(false);
-  } else if (mod && /^[zyak]$/i.test(e.key)) e.stopPropagation();
+  } else if (e.target instanceof HTMLInputElement && handleEditKey(e, e.target, mod)) {
+    /* handled */
+  } else if (mod && e.key.toLowerCase() === 'k') e.stopPropagation();
 });
 
 // ---------------------------------------------------------------- chrome: toolbar, zoom, format, menu
@@ -1574,6 +1580,7 @@ editor.addEventListener('keydown', e => {
     if (e.isComposing || e.keyCode === 229) return;
     if (k === 'Enter' && (e.shiftKey || e.altKey)) {
       stop(e);
+      recordChange(editor, 'other');
       editor.setRangeText('\n', editor.selectionStart, editor.selectionEnd, 'end');
       editor.dispatchEvent(new Event('input'));
     } else if (k === 'Enter') {
@@ -1592,7 +1599,7 @@ editor.addEventListener('keydown', e => {
       const id = S.editing.id;
       commitEdit();
       openLinkEditor(id);
-    } else if (mod && /^[zya]$/i.test(k)) e.stopPropagation(); // native undo / select-all inside the text box
+    } else handleEditKey(e, editor, mod);
     return;
   }
   if (e.isComposing || e.keyCode === 229 || !S.doc) return;
