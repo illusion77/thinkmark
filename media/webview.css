@@ -277,7 +277,8 @@ button {
   cursor: ew-resize !important;
 }
 
-/* A topic with a set width: the text wraps at that width instead of the level's default. */
+/* A topic with a dragged width: the text wraps at that width instead of the level's default, and
+   shorter text keeps the topic narrower (the width is a maximum, set as max-width on the topic). */
 .topic.sized .t-text {
   max-width: none;
 }

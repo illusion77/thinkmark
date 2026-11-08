@@ -120,7 +120,7 @@ Shortcuts are shown for macOS. On Windows and Linux, use `Ctrl` instead of `Cmd`
 | Select several topics | Drag a box on empty space (`Shift` or `Cmd` adds), `Shift` / `Cmd`-click, `Cmd+A` |
 | Fold / unfold | `Cmd+/` |
 | Bold / italic / underline | `Cmd+B` / `Cmd+I` / `Cmd+U`: the selected text while editing, or the whole text of the selected topics. Underline is written as `<u>text</u>` |
-| Topic width | Drag the topic's outer edge (the left edge for topics left of the center); double-click the edge or right-click → Reset Width to fit the text again |
+| Topic width | Drag the topic's outer edge (the left edge for topics left of the center) to set the width its text wraps at; shorter text keeps the topic narrower. Double-click the edge or right-click → Reset Width to go back to the default |
 | Link | `Cmd+K` |
 | Note | `F4` |
 | Insert image | `Shift+Cmd+I` |

@@ -487,7 +487,8 @@ function ensureTopic(n: MindNode, depth: number, branch: string, th: Theme): HTM
     (n.image ? ' has-img' : '') +
     (n.width ? ' sized' : '') +
     (!text && !n.image ? ' empty' : '');
-  el.style.width = n.width ? `${n.width}px` : '';
+  // a dragged width is the most the topic may take: shorter text keeps it narrower
+  el.style.maxWidth = n.width ? `${n.width}px` : '';
   el.style.setProperty('--branch', branch);
   el.style.setProperty('--branch-fg', th.fillFg === 'auto' ? readableOn(branch) : th.fillFg);
   el.style.setProperty('--branch-tint', withAlpha(branch, th.dark ? 0.22 : 0.12));
@@ -1782,8 +1783,10 @@ interface WidthGesture {
   id: string;
   sx: number;
   w0: number;
-  /** Width before the drag (undefined: fits the text). */
+  /** Width before the drag (undefined: the level's default). */
   before: number | undefined;
+  /** The most the topic could take when the drag started (its set width or the level's default), in px. */
+  cap: number;
   /** +1 for the right edge, -1 for the left edge (topics left of the center). */
   dir: 1 | -1;
   /** 2 for centered topics, whose edge moves by half the width change. */
@@ -1872,7 +1875,9 @@ viewport.addEventListener('mousedown', e => {
   if (act === 'width') {
     const n = node(id)!;
     const centered = topic.classList.contains('d0') || settings().layout === 'down';
-    gesture = { kind: 'width', id, sx: e.clientX, w0: topic.offsetWidth, before: n.width, dir: topic.classList.contains('left') ? -1 : 1, gain: centered ? 2 : 1, moved: false };
+    const textEl = topic.querySelector('.t-text') as HTMLElement;
+    const cap = n.width ?? (parseFloat(getComputedStyle(textEl).maxWidth) || Infinity) + topic.offsetWidth - textEl.offsetWidth;
+    gesture = { kind: 'width', id, sx: e.clientX, w0: topic.offsetWidth, before: n.width, cap, dir: topic.classList.contains('left') ? -1 : 1, gain: centered ? 2 : 1, moved: false };
     topic.classList.add('resizing');
     app.classList.add('resizing-w');
     return;
@@ -1927,7 +1932,10 @@ window.addEventListener('mousemove', e => {
     const dx = e.clientX - g.sx;
     if (!n || (!g.moved && Math.abs(dx) < 3)) return;
     g.moved = true;
-    n.width = Math.min(TOPIC_WIDTH_MAX, Math.max(TOPIC_WIDTH_MIN, Math.round(g.w0 + (g.dir * g.gain * dx) / S.view.s)));
+    const w = Math.min(TOPIC_WIDTH_MAX, Math.max(TOPIC_WIDTH_MIN, Math.round(g.w0 + (g.dir * g.gain * dx) / S.view.s)));
+    // The drag starts at the visible edge. Narrowing sets the width; widening a topic whose text
+    // already fits only raises its limit, never lowers it below what it was.
+    n.width = w < g.w0 || w > g.cap ? w : g.before;
     scheduleRender();
   } else if (g.kind === 'resize') {
     g.w = Math.max(24, Math.round(g.w0 + (e.clientX - g.sx) / S.view.s));
