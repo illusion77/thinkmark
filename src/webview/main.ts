@@ -6,7 +6,8 @@ import { icons, layoutIcons } from './icons';
 import { escapeHtml, renderInline } from './inline';
 import { layoutTree, type Box } from './layout';
 import { anchorOut, branchPath, foldPoint, type LineOpts } from './lines';
-import { handleEditKey, recordChange, resetHistory, trackHistory } from './textHistory';
+import { hasStyle, setStyle, toggleInline, type InlineStyle } from './format';
+import { handleEditKey, recordChange, resetHistory, trackHistory, type TextField } from './textHistory';
 import { readableOn, resolveTheme, THEMES, withAlpha, type Theme } from './themes';
 
 interface VsApi {
@@ -933,6 +934,34 @@ function moveNodes(ids: string[], targetId: string, pos: Pos, side?: 1 | -1) {
   commit(tops);
 }
 
+// ---------------------------------------------------------------- bold / italic / underline (Cmd+B / I / U)
+
+const STYLE_KEYS: Record<string, InlineStyle> = { b: 'bold', i: 'italic', u: 'underline' };
+
+function styleKey(e: KeyboardEvent, mod: boolean): InlineStyle | undefined {
+  return mod && !e.shiftKey && !e.altKey ? STYLE_KEYS[e.key.toLowerCase()] : undefined;
+}
+
+/** Toggle a style on the selected text of a text box (topic text or note). */
+function styleField(el: TextField, style: InlineStyle) {
+  const r = toggleInline(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0, style);
+  if (r.text !== el.value) {
+    recordChange(el, 'other');
+    el.value = r.text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  el.setSelectionRange(r.start, r.end);
+}
+
+/** Toggle a style on the whole text of the selected topics: off when all of them have it, on otherwise. */
+function styleTopics(style: InlineStyle) {
+  const ns = [...S.sel].map(node).filter((n): n is MindNode => !!n && !!n.text.trim());
+  if (!ns.length) return;
+  const on = !ns.every(n => hasStyle(n.text, style));
+  for (const n of ns) n.text = setStyle(n.text, style, on);
+  commit([...S.sel]);
+}
+
 /** Back to a width that fits the text. */
 function resetWidth(id: string) {
   const n = node(id);
@@ -1090,7 +1119,13 @@ noteEl.addEventListener('keydown', e => {
     e.preventDefault();
     e.stopPropagation();
     closeNote(true);
-  } else if (e.target instanceof HTMLTextAreaElement) handleEditKey(e, e.target, mod);
+  } else if (e.target instanceof HTMLTextAreaElement) {
+    const style = styleKey(e, mod);
+    if (!style) return handleEditKey(e, e.target, mod);
+    e.preventDefault();
+    e.stopPropagation();
+    styleField(e.target, style);
+  }
 });
 
 // ---------------------------------------------------------------- topic links (Cmd+K)
@@ -1615,6 +1650,9 @@ editor.addEventListener('keydown', e => {
       const id = S.editing.id;
       commitEdit();
       openLinkEditor(id);
+    } else if (styleKey(e, mod)) {
+      stop(e);
+      styleField(editor, styleKey(e, mod)!);
     } else handleEditKey(e, editor, mod);
     return;
   }
@@ -1642,6 +1680,7 @@ editor.addEventListener('keydown', e => {
   else if (k.startsWith('Arrow') && (e.altKey || (mod && e.shiftKey)) && (k === 'ArrowUp' || k === 'ArrowDown')) moveSibling(id, k === 'ArrowUp' ? -1 : 1);
   else if (k.startsWith('Arrow') && !mod) navigate(k);
   else if (mod && k === '/') toggleFoldSelection();
+  else if (styleKey(e, mod)) styleTopics(styleKey(e, mod)!);
   else if (mod && (k === '=' || k === '+')) zoomBy(1.2);
   else if (mod && k === '-') zoomBy(1 / 1.2);
   else if (mod && (k === '0' || k === ')') && e.shiftKey) fitView();
