@@ -25,9 +25,16 @@ const TOPIC_LINK_RE = /^\[((?:[^[\]\\]|\\.|\[[^[\]]*\])*)\]\(\s*(<[^>]*>|[^\s)]+
 const IMG_RE = /!\[([^\]]*)\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+("[^"]*"|'[^']*'))?\s*\)/;
 const BR_RE = /<br\s*\/?>/gi;
 const BLANK_RE = /^[ \t]*$/;
-/** Marks a main topic that sits on the left of the central topic: `## Topic <!-- mindmap: left -->`. */
-const LEFT_RE = /[ \t]*<!--[ \t]*(?:mindmap[ \t]*:[ \t]*)?left[ \t]*-->[ \t]*/gi;
-const LEFT_MARK = '<!-- mindmap: left -->';
+/**
+ * Topic marks in an HTML comment at the end of the topic line, comma separated:
+ * `left` (a main topic on the left of the central topic) and `width=320` (topic width in px).
+ * `## Topic <!-- mindmap: left, width=320 -->`
+ */
+const MARK_TOKEN = '(?:left|width[ \\t]*=[ \\t]*\\d+)';
+const MARK_RE = new RegExp(`[ \\t]*<!--[ \\t]*(?:mindmap[ \\t]*:[ \\t]*)?(${MARK_TOKEN}(?:[ \\t]*,[ \\t]*${MARK_TOKEN})*)[ \\t]*-->[ \\t]*`, 'gi');
+/** Limits for a dragged topic width (px). */
+export const TOPIC_WIDTH_MIN = 48;
+export const TOPIC_WIDTH_MAX = 2000;
 
 const LAYOUTS: Layout[] = ['map', 'right', 'left', 'down'];
 const LINE_STYLES: LineStyle[] = ['curve', 'elbow', 'straight'];
@@ -68,14 +75,22 @@ function dedent(line: string, n: number): string {
   return line.slice(i);
 }
 
-export function parseTopicText(raw: string): Pick<MindNode, 'text' | 'image' | 'task' | 'side' | 'link' | 'linkTitle'> {
+export function parseTopicText(raw: string): Pick<MindNode, 'text' | 'image' | 'task' | 'side' | 'width' | 'link' | 'linkTitle'> {
   let s = raw;
   let side: MindNode['side'];
-  if (LEFT_RE.test(s)) {
-    side = 'left';
-    s = s.replace(LEFT_RE, ' ').trim();
-  }
-  LEFT_RE.lastIndex = 0;
+  let width: number | undefined;
+  let marked = false;
+  s = s.replace(MARK_RE, (_m, body: string) => {
+    marked = true;
+    for (const tok of body.split(',')) {
+      const t = tok.trim().toLowerCase();
+      const wm = /^width[ \t]*=[ \t]*(\d+)$/.exec(t);
+      if (t === 'left') side = 'left';
+      else if (wm) width = Math.min(TOPIC_WIDTH_MAX, Math.max(TOPIC_WIDTH_MIN, parseInt(wm[1], 10)));
+    }
+    return ' ';
+  });
+  if (marked) s = s.trim();
   let task: MindNode['task'];
   const tm = TASK_RE.exec(s);
   if (tm) {
@@ -107,7 +122,7 @@ export function parseTopicText(raw: string): Pick<MindNode, 'text' | 'image' | '
     link = lm[2];
     linkTitle = lm[3];
   }
-  return { text: s.replace(BR_RE, '\n'), image, task, side, link, linkTitle };
+  return { text: s.replace(BR_RE, '\n'), image, task, side, width, link, linkTitle };
 }
 
 export function imageToken(img: MindImage): string {
@@ -124,7 +139,11 @@ export function topicLine(n: MindNode, main = false): string {
     t = !t ? tok : n.image.atStart ? `${tok} ${t}` : `${t} ${tok}`;
   }
   if (n.task) t = (n.task === 'done' ? '[x]' : '[ ]') + (t ? ' ' + t : '');
-  if (main && n.side === 'left') t = t ? `${t} ${LEFT_MARK}` : LEFT_MARK;
+  const marks = [main && n.side === 'left' ? 'left' : '', n.width ? `width=${Math.round(n.width)}` : ''].filter(Boolean);
+  if (marks.length) {
+    const mark = `<!-- mindmap: ${marks.join(', ')} -->`;
+    t = t ? `${t} ${mark}` : mark;
+  }
   return t;
 }
 

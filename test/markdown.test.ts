@@ -237,3 +237,36 @@ test('an empty central topic survives a round trip', () => {
   assert.deepEqual(texts(parse(out).root), { '': ['A'] });
   assert.equal(ser(parse(out)), out);
 });
+
+test('topic width is read from and written to the topic line', () => {
+  const d = parse(`# Root <!-- mindmap: width=400 -->\n\n## A <!-- mindmap: left, width=320 -->\n\n- a1 <!-- mindmap: width=200 -->\n- a2\n\n## B <!-- mindmap: left -->\n`);
+  const [a, b] = d.root.children;
+  assert.equal(d.root.width, 400);
+  assert.equal(d.root.text, 'Root');
+  assert.equal(a.side, 'left');
+  assert.equal(a.width, 320);
+  assert.equal(a.text, 'A');
+  assert.equal(a.children[0].width, 200);
+  assert.equal(a.children[1].width, undefined);
+  assert.equal(b.side, 'left');
+  assert.equal(b.width, undefined);
+  roundTrip(`# Root <!-- mindmap: width=400 -->\n\n## A <!-- mindmap: left, width=320 -->\n\n- a1 <!-- mindmap: width=200 -->\n- a2\n\n## B <!-- mindmap: left -->\n`);
+});
+
+test('setting and clearing a topic width', () => {
+  const d = parse(`# Root\n\n## A\n\n- [x] [a1](https://example.com)\n`);
+  const a1 = d.root.children[0].children[0];
+  a1.width = 251.6;
+  assert.equal(ser(d), `# Root\n\n## A\n\n- [x] [a1](https://example.com) <!-- mindmap: width=252 -->\n`);
+  const again = parse(ser(d)).root.children[0].children[0];
+  assert.deepEqual([again.text, again.task, again.link, again.width], ['a1', 'done', 'https://example.com', 252]);
+  a1.width = undefined;
+  assert.equal(ser(d), `# Root\n\n## A\n\n- [x] [a1](https://example.com)\n`);
+});
+
+test('topic width is clamped and other comments are left alone', () => {
+  const d = parse(`# Root\n\n## A <!-- mindmap: width=3 -->\n\n## B <!-- a note -->\n`);
+  assert.equal(d.root.children[0].width, 48);
+  assert.equal(d.root.children[1].text, 'B <!-- a note -->');
+  assert.equal(d.root.children[1].width, undefined);
+});

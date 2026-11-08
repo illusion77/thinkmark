@@ -237,6 +237,64 @@ button {
   min-width: 24px;
 }
 
+/* Width handle on the outer edge (left edge for topics left of the center); the fold button sits
+   further out, so the handle stays just inside the edge. */
+.t-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -2px;
+  width: 7px;
+  cursor: ew-resize;
+  z-index: 1;
+}
+
+.topic.left .t-resize {
+  right: auto;
+  left: -2px;
+}
+
+.t-resize::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 2px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--sel);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.t-resize:hover::after,
+.topic.resizing .t-resize::after {
+  opacity: 1;
+}
+
+#app.resizing-w,
+#app.resizing-w * {
+  cursor: ew-resize !important;
+}
+
+/* A topic with a set width: the text wraps at that width instead of the level's default. */
+.topic.sized .t-text {
+  max-width: none;
+}
+
+.topic.dn.sized .t-row {
+  align-self: stretch;
+}
+
+.topic.dn.sized .t-text {
+  flex: 1 1 auto;
+}
+
+.topic.sized .t-img-wrap,
+.topic.sized .t-img {
+  max-width: 100%;
+}
+
 .topic.task-done .t-text {
   text-decoration: line-through;
   opacity: 0.6;

@@ -29,6 +29,8 @@ export interface MindNode {
   task?: 'todo' | 'done';
   /** Main topics only: drawn on the left of the central topic in the mind map structure. */
   side?: 'left';
+  /** Topic width in px set by dragging its edge in the map (none: fits the text). */
+  width?: number;
   image?: MindImage;
   /** Topic hyperlink (Cmd+K): the topic line is written as [text](link). Kept as written (may be <...>). */
   link?: string;

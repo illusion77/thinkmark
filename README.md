@@ -89,7 +89,7 @@ Consistency vs availability for the alias namespace.
 
 New topics follow the style of their siblings. A topic without siblings becomes a heading for the first two levels of the map and a list item below that (setting `thinkmark.headingLevels`).
 
-In the mind map structure, main topics are placed on the right of the central topic. A main topic you move to the left is marked with `<!-- mindmap: left -->`, which Markdown previews do not show.
+In the mind map structure, main topics are placed on the right of the central topic. A main topic you move to the left is marked with `<!-- mindmap: left -->`, which Markdown previews do not show. A topic width you set by dragging is stored the same way, e.g. `<!-- mindmap: width=320 -->` or `<!-- mindmap: left, width=320 -->`.
 
 Structure, theme and line style chosen in the Format panel are saved in the file's front matter:
 
@@ -119,6 +119,7 @@ Shortcuts are shown for macOS. On Windows and Linux, use `Ctrl` instead of `Cmd`
 | Navigate | Arrow keys; `Shift+Tab` goes to the parent, `Home` to the central topic |
 | Select several topics | Drag a box on empty space (`Shift` or `Cmd` adds), `Shift` / `Cmd`-click, `Cmd+A` |
 | Fold / unfold | `Cmd+/` |
+| Topic width | Drag the topic's outer edge (the left edge for topics left of the center); double-click the edge or right-click → Reset Width to fit the text again |
 | Link | `Cmd+K` |
 | Note | `F4` |
 | Insert image | `Shift+Cmd+I` |

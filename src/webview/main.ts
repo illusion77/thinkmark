@@ -1,4 +1,4 @@
-import { escapeNote, imageToken, markdownToNodes, nodesToMarkdown, parseMarkdown, reconcile, serializeDoc, walk } from '../shared/markdown';
+import { escapeNote, imageToken, markdownToNodes, nodesToMarkdown, parseMarkdown, reconcile, serializeDoc, TOPIC_WIDTH_MAX, TOPIC_WIDTH_MIN, walk } from '../shared/markdown';
 import type { Layout, LineStyle, MindDoc, MindNode } from '../shared/model';
 import type { FromWebview, MindConfig, ToWebview } from '../shared/protocol';
 import { setLang, t } from './i18n';
@@ -445,8 +445,13 @@ function topicInner(n: MindNode): string {
   h += '<span class="t-text"></span>';
   if (n.link) h += `<span class="t-link" data-act="link" title="${escapeHtml(linkTarget(n.link))}">${icons.linkSmall}</span>`;
   if (n.note) h += `<span class="t-note" data-act="note" title="${escapeHtml(n.note.length > 400 ? n.note.slice(0, 400) + '…' : n.note)}">${icons.noteSmall}</span>`;
-  return h + '</div>';
+  h += '</div>';
+  // drag the outer edge to set the width (not for a central topic that is only the file name)
+  if (canResize(n)) h += `<span class="t-resize" data-act="width" title="${escapeHtml(t('resizeHint'))}"></span>`;
+  return h;
 }
+
+const canResize = (n: MindNode) => !(S.doc?.virtualRoot && n === root());
 
 function ensureTopic(n: MindNode, depth: number, branch: string, th: Theme): HTMLElement {
   let el = topicEls.get(n.id);
@@ -456,7 +461,7 @@ function ensureTopic(n: MindNode, depth: number, branch: string, th: Theme): HTM
     nodesLayer.appendChild(el);
     topicEls.set(n.id, el);
   }
-  const sig = JSON.stringify([n.image?.src, n.image?.width, n.task, n.note ?? '', n.link, S.baseUri]);
+  const sig = JSON.stringify([n.image?.src, n.image?.width, n.task, n.note ?? '', n.link, S.baseUri, canResize(n)]);
   if (el.dataset.sig !== sig) {
     el.innerHTML = topicInner(n);
     el.dataset.sig = sig;
@@ -479,7 +484,9 @@ function ensureTopic(n: MindNode, depth: number, branch: string, th: Theme): HTM
     (editing ? ' editing' : '') +
     (n.task === 'done' ? ' task-done' : '') +
     (n.image ? ' has-img' : '') +
+    (n.width ? ' sized' : '') +
     (!text && !n.image ? ' empty' : '');
+  el.style.width = n.width ? `${n.width}px` : '';
   el.style.setProperty('--branch', branch);
   el.style.setProperty('--branch-fg', th.fillFg === 'auto' ? readableOn(branch) : th.fillFg);
   el.style.setProperty('--branch-tint', withAlpha(branch, th.dark ? 0.22 : 0.12));
@@ -924,6 +931,14 @@ function moveNodes(ids: string[], targetId: string, pos: Pos, side?: 1 | -1) {
       n.indent = undefined;
     }
   commit(tops);
+}
+
+/** Back to a width that fits the text. */
+function resetWidth(id: string) {
+  const n = node(id);
+  if (!n?.width) return;
+  n.width = undefined;
+  commit([id]);
 }
 
 function toggleFold(id: string | null) {
@@ -1410,6 +1425,7 @@ function topicMenu(id: string): MenuItem[] {
         ]
       : []),
     { label: t('toggleTask'), run: () => toggleTask(topLevelSelection()) },
+    ...(n.width ? [{ label: t('resetWidth'), run: () => resetWidth(id) }] : []),
     '-',
     ...sideMenu(n),
     ...(n.children.length && !isRoot ? [{ label: n.collapsed ? t('expand') : t('collapse'), key: `${keyLabel('mod+/')}`, run: () => toggleFold(id) }] : []),
@@ -1719,7 +1735,22 @@ type Gesture =
   | { kind: 'pan'; sx: number; sy: number; vx: number; vy: number; moved: boolean; menuAt?: { x: number; y: number; target: HTMLElement } }
   | MarqueeGesture
   | DragGesture
-  | { kind: 'resize'; id: string; sx: number; w0: number; w: number; img: HTMLImageElement };
+  | { kind: 'resize'; id: string; sx: number; w0: number; w: number; img: HTMLImageElement }
+  | WidthGesture;
+/** Dragging a topic's outer edge. */
+interface WidthGesture {
+  kind: 'width';
+  id: string;
+  sx: number;
+  w0: number;
+  /** Width before the drag (undefined: fits the text). */
+  before: number | undefined;
+  /** +1 for the right edge, -1 for the left edge (topics left of the center). */
+  dir: 1 | -1;
+  /** 2 for centered topics, whose edge moves by half the width change. */
+  gain: number;
+  moved: boolean;
+}
 interface DragGesture {
   kind: 'drag';
   id: string;
@@ -1799,6 +1830,14 @@ viewport.addEventListener('mousedown', e => {
     select(id);
     return openNote(id);
   }
+  if (act === 'width') {
+    const n = node(id)!;
+    const centered = topic.classList.contains('d0') || settings().layout === 'down';
+    gesture = { kind: 'width', id, sx: e.clientX, w0: topic.offsetWidth, before: n.width, dir: topic.classList.contains('left') ? -1 : 1, gain: centered ? 2 : 1, moved: false };
+    topic.classList.add('resizing');
+    app.classList.add('resizing-w');
+    return;
+  }
   if (act === 'resize') {
     const img = topic.querySelector('.t-img') as HTMLImageElement;
     const w0 = img.getBoundingClientRect().width / S.view.s;
@@ -1844,6 +1883,13 @@ window.addEventListener('mousemove', e => {
     g.moved = true;
     updateMarquee(g);
     edgePan(g, () => updateMarquee(g));
+  } else if (g.kind === 'width') {
+    const n = node(g.id);
+    const dx = e.clientX - g.sx;
+    if (!n || (!g.moved && Math.abs(dx) < 3)) return;
+    g.moved = true;
+    n.width = Math.min(TOPIC_WIDTH_MAX, Math.max(TOPIC_WIDTH_MIN, Math.round(g.w0 + (g.dir * g.gain * dx) / S.view.s)));
+    scheduleRender();
   } else if (g.kind === 'resize') {
     g.w = Math.max(24, Math.round(g.w0 + (e.clientX - g.sx) / S.view.s));
     g.img.style.width = `${g.w}px`;
@@ -1887,6 +1933,11 @@ window.addEventListener('mouseup', e => {
     if (g.menuAt && !g.moved) openContextMenu(g.menuAt.x, g.menuAt.y, g.menuAt.target);
   } else if (g.kind === 'marquee') {
     endMarquee(g, false);
+  } else if (g.kind === 'width') {
+    topicEls.get(g.id)?.classList.remove('resizing');
+    app.classList.remove('resizing-w');
+    const n = node(g.id);
+    if (n && n.width !== g.before) commit([n.id]);
   } else if (g.kind === 'resize') {
     const n = node(g.id);
     if (n?.image && g.w !== g.w0) {
@@ -2181,6 +2232,7 @@ viewport.addEventListener('dblclick', e => {
   const n = node(topic.dataset.id);
   if (!n) return;
   if (target.classList.contains('t-img') && n.image) return post({ type: 'openImage', src: n.image.src });
+  if (target.classList.contains('t-resize')) return resetWidth(n.id);
   beginEdit(n.id, 'select');
 });
 
