@@ -165,6 +165,9 @@ Dropping onto the topic itself also makes it a subtopic. Next to the central top
 | `thinkmark.defaultTheme` | `auto` | Theme when the file does not set one |
 | `thinkmark.defaultLineStyle` | `curve` | Branch line style when the file does not set one |
 | `thinkmark.headingLevels` | `2` | Map levels written as headings for new topics without siblings |
+| `thinkmark.topicMaxWidth.centralTopic` | `26` | Longest line of the central topic before it wraps, in characters (one Chinese character or about two Latin letters each) |
+| `thinkmark.topicMaxWidth.mainTopics` | `32` | Same for the main topics |
+| `thinkmark.topicMaxWidth.subtopics` | `44` | Same for all deeper topics |
 | `thinkmark.syncSelection` | `true` | Keep the selected topic and the cursor in a side-by-side Markdown editor in sync |
 
 ## Development

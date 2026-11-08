@@ -297,11 +297,24 @@ function refreshSelection() {
   updateStatus();
 }
 
+/** thinkmark.topicMaxWidth.* → the wrap widths in webview.css (which keeps its own defaults for missing values). */
+function applyTopicWidths() {
+  const w = S.config.topicMaxWidth;
+  const set = (name: string, v: number | undefined) => {
+    if (typeof v === 'number' && Number.isFinite(v)) app.style.setProperty(name, `${Math.min(200, Math.max(6, v))}em`);
+    else app.style.removeProperty(name);
+  };
+  set('--w-d0', w?.central);
+  set('--w-d1', w?.main);
+  set('--w-dn', w?.sub);
+}
+
 window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
   const m = e.data;
   switch (m.type) {
     case 'init':
       S.config = m.config;
+      applyTopicWidths();
       S.fileName = m.fileName || 'Mind Map';
       S.baseUri = m.baseUri;
       S.canSaveImages = m.canSaveImages;
@@ -326,6 +339,7 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
       break;
     case 'config':
       S.config = m.config;
+      applyTopicWidths();
       render();
       buildFormat();
       break;

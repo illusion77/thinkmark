@@ -167,11 +167,12 @@ button {
   z-index: 2;
 }
 
-/* Wrap widths are in em so they hold a steady number of characters per line (here 26 / 32 / 44 CJK,
+/* Wrap widths are in em so they hold a steady number of characters per line (by default 26 / 32 / 44 CJK,
    roughly twice that in Latin text) whatever the font size. Leaves get the most room because long
-   sentences usually live there; the center and main topics stay tighter to keep the map compact. */
+   sentences usually live there; the center and main topics stay tighter to keep the map compact.
+   The thinkmark.topicMaxWidth.* settings override them through --w-d0 / --w-d1 / --w-dn. */
 .d0 .t-text {
-  max-width: 26em;
+  max-width: var(--w-d0, 26em);
   text-align: center;
 }
 
@@ -185,7 +186,7 @@ button {
 }
 
 .d1 .t-text {
-  max-width: 32em;
+  max-width: var(--w-d1, 32em);
   text-align: center;
 }
 
@@ -219,7 +220,7 @@ button {
 }
 
 .dn .t-text {
-  max-width: 44em;
+  max-width: var(--w-dn, 44em);
 }
 
 .dn.left .t-text {

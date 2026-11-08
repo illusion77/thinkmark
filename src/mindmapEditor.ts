@@ -18,6 +18,11 @@ export function readConfig(): MindConfig {
     defaultLineStyle: c.get('defaultLineStyle', 'curve'),
     headingLevels: c.get('headingLevels', 2),
     syncSelection: c.get('syncSelection', true),
+    topicMaxWidth: {
+      central: c.get('topicMaxWidth.centralTopic', 26),
+      main: c.get('topicMaxWidth.mainTopics', 32),
+      sub: c.get('topicMaxWidth.subtopics', 44),
+    },
   };
 }
 

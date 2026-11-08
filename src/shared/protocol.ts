@@ -6,6 +6,8 @@ export interface MindConfig {
   defaultLineStyle: LineStyle;
   headingLevels: number;
   syncSelection: boolean;
+  /** Wrap widths in em (≈ one CJK character each) for the central topic, main topics and deeper topics. */
+  topicMaxWidth?: { central: number; main: number; sub: number };
 }
 
 export type ToWebview =

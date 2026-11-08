@@ -182,6 +182,27 @@
           "maximum": 6,
           "description": "New topics without siblings become headings for the first N levels of the map (the central topic is level 1) and list items below that."
         },
+        "thinkmark.topicMaxWidth.centralTopic": {
+          "type": "number",
+          "default": 26,
+          "minimum": 6,
+          "maximum": 200,
+          "markdownDescription": "Longest line of the central topic before its text wraps, in characters (one Chinese character, or about two Latin letters, per unit)."
+        },
+        "thinkmark.topicMaxWidth.mainTopics": {
+          "type": "number",
+          "default": 32,
+          "minimum": 6,
+          "maximum": 200,
+          "markdownDescription": "Longest line of the main topics (the first level around the central topic) before their text wraps, in characters (one Chinese character, or about two Latin letters, per unit)."
+        },
+        "thinkmark.topicMaxWidth.subtopics": {
+          "type": "number",
+          "default": 44,
+          "minimum": 6,
+          "maximum": 200,
+          "markdownDescription": "Longest line of all deeper topics before their text wraps, in characters (one Chinese character, or about two Latin letters, per unit)."
+        },
         "thinkmark.syncSelection": {
           "type": "boolean",
           "default": true,
