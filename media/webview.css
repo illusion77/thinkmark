@@ -167,11 +167,11 @@ button {
   z-index: 2;
 }
 
-/* Wrap widths are in em so they hold a steady number of characters per line (here 20 / 24 / 32 CJK,
+/* Wrap widths are in em so they hold a steady number of characters per line (here 26 / 32 / 44 CJK,
    roughly twice that in Latin text) whatever the font size. Leaves get the most room because long
    sentences usually live there; the center and main topics stay tighter to keep the map compact. */
 .d0 .t-text {
-  max-width: 20em;
+  max-width: 26em;
   text-align: center;
 }
 
@@ -185,7 +185,7 @@ button {
 }
 
 .d1 .t-text {
-  max-width: 24em;
+  max-width: 32em;
   text-align: center;
 }
 
@@ -219,7 +219,7 @@ button {
 }
 
 .dn .t-text {
-  max-width: 32em;
+  max-width: 44em;
 }
 
 .dn.left .t-text {
