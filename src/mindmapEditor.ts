@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { minimalSplice } from './shared/diff';
 import type { FromWebview, MindConfig, ToWebview } from './shared/protocol';
+import { SpellService } from './spellService';
 
 export const VIEW_TYPES = ['thinkmark.editor', 'thinkmark.editor.default'] as const;
 
@@ -23,12 +24,14 @@ export function readConfig(): MindConfig {
       main: c.get('topicMaxWidth.mainTopics', 32),
       sub: c.get('topicMaxWidth.subtopics', 44),
     },
+    spellCheck: c.get('spellCheck.enabled', true),
   };
 }
 
 export class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
   /** Document shown in the most recently focused mind map. */
   public activeDocument: vscode.TextDocument | undefined;
+  readonly spell: SpellService;
 
   static register(context: vscode.ExtensionContext): { provider: MindmapEditorProvider; disposable: vscode.Disposable } {
     const provider = new MindmapEditorProvider(context);
@@ -43,7 +46,9 @@ export class MindmapEditorProvider implements vscode.CustomTextEditorProvider {
     return { provider, disposable };
   }
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(private readonly context: vscode.ExtensionContext) {
+    this.spell = new SpellService(vscode.Uri.joinPath(context.extensionUri, 'dist', 'dict'));
+  }
 
   async resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
     const docDir = document.uri.scheme === 'untitled' ? undefined : vscode.Uri.joinPath(document.uri, '..');
@@ -188,6 +193,15 @@ class EditorSession {
           break;
         case 'revealLine':
           this.revealLine(m.line);
+          break;
+        case 'spellCheck':
+          this.post({ type: 'spellResult', words: m.words, bad: await this.provider.spell.check(m.words) });
+          break;
+        case 'spellSuggest':
+          this.post({ type: 'spellSuggestions', word: m.word, suggestions: await this.provider.spell.suggest(m.word) });
+          break;
+        case 'spellAdd':
+          await this.provider.spell.addWord(m.word);
           break;
         case 'notify': {
           const fn = m.level === 'error' ? vscode.window.showErrorMessage : m.level === 'warn' ? vscode.window.showWarningMessage : vscode.window.showInformationMessage;

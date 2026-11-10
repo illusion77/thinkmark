@@ -98,6 +98,23 @@ exports.run = async function run() {
     await doc.save();
     check('save writes the file', fs.readFileSync(mdPath, 'utf8').includes('- a2'));
 
+    // ---- spelling: the dictionary ships with the extension and is read in the extension host ----
+    const misspelled = await api.spell.check(['the', 'teh', 'config', 'Recieve']);
+    check('spell checker finds the misspelled words', misspelled.join() === 'teh,Recieve', misspelled);
+    const suggested = await api.spell.suggest('teh');
+    check('spell checker suggests a replacement', suggested[0] === 'the', suggested);
+    posted.length = 0;
+    await session.onMessage({ type: 'spellCheck', words: ['wrod', 'word'] });
+    const spelled = posted.find(m => m.type === 'spellResult');
+    check('webview is told which words are misspelled', spelled && spelled.bad.join() === 'wrod', spelled);
+    await session.onMessage({ type: 'spellAdd', word: 'wrod' });
+    const reconfigured = await waitFor(() => posted.find(m => m.type === 'config'), 5000).catch(() => undefined);
+    const afterAdd = await api.spell.check(['wrod', 'wrood']);
+    check('"Add to Dictionary" saves the word in the user settings', reconfigured && afterAdd.join() === 'wrood', {
+      afterAdd,
+      userWords: vscode.workspace.getConfiguration('thinkmark').get('spellCheck.userWords'),
+    });
+
     // ---- images: nothing is deleted automatically; the cleanup command finds leftovers ----
     const cdir = path.join(dir, 'cleanup');
     const cassets = path.join(cdir, 'assets');

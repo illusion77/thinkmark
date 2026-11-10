@@ -56,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
       await vscode.commands.executeCommand('vscode.openWith', uri, VIEW_TYPES[0]);
     }),
   );
-  return { liveSessions, cleanup };
+  return { liveSessions, cleanup, spell: provider.spell };
 }
 
 export function deactivate() {}

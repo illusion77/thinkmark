@@ -306,6 +306,44 @@ button {
 .topic.editing .t-text {
   visibility: hidden;
   padding-right: 3px;
+  text-decoration: none;
+}
+
+/* Spelling marks. The text box being edited has a copy of its text exactly under it (topic) or over
+   it (note); the copy is invisible except for the wavy lines under its misspelled words. */
+.sp {
+  color: transparent;
+  text-decoration: underline wavy var(--spell, #e5484d);
+  text-decoration-thickness: 1px;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
+.topic.editing .t-text .sp {
+  visibility: visible;
+}
+
+/* the word whose popover is open */
+.sp.hot {
+  background: var(--spell-hot);
+  border-radius: 2px;
+}
+
+/* on a topic filled with a color, red may not show: the marks take the text color */
+.d0 .sp {
+  text-decoration-color: var(--root-spell);
+}
+
+.d0 .sp.hot {
+  background: var(--root-spell-hot);
+}
+
+.main-filled .d1 .sp {
+  text-decoration-color: var(--branch-fg);
+}
+
+.main-filled .d1 .sp.hot {
+  background: var(--branch-hot);
 }
 
 .topic.dragging {
@@ -997,6 +1035,29 @@ button {
   font-weight: 600;
 }
 
+.note-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.note-marks {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font: 12.5px/1.55 var(--mono);
+  color: transparent;
+  pointer-events: none;
+}
+
 .note-text {
   flex: 1;
   width: 100%;
@@ -1128,6 +1189,53 @@ button {
 .ms {
   height: 1px;
   margin: 4px 8px;
+  background: var(--ui-border);
+}
+
+/* ------------------------------------------------------------------ spelling popover */
+
+#spelltip {
+  display: none;
+  flex-direction: column;
+  min-width: 132px;
+  padding: 4px;
+  border-radius: 9px;
+  z-index: 40;
+}
+
+#spelltip.open {
+  display: flex;
+}
+
+#spelltip button {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#spelltip button:first-child:not(.st-add) {
+  font-weight: 600;
+}
+
+#spelltip .st-add {
+  color: var(--ui-muted);
+  font-size: 12px;
+}
+
+#spelltip button:hover {
+  background: var(--sel);
+  color: #fff;
+}
+
+.st-sep {
+  height: 1px;
+  margin: 3px 6px;
   background: var(--ui-border);
 }
 

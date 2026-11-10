@@ -8,6 +8,8 @@ export interface MindConfig {
   syncSelection: boolean;
   /** Wrap widths in em (≈ one CJK character each) for the central topic, main topics and deeper topics. */
   topicMaxWidth?: { central: number; main: number; sub: number };
+  /** Mark misspelled English words while editing. */
+  spellCheck?: boolean;
 }
 
 export type ToWebview =
@@ -16,7 +18,10 @@ export type ToWebview =
   | { type: 'ack'; text: string }
   | { type: 'config'; config: MindConfig }
   | { type: 'imageReady'; nodeId: string; src: string }
-  | { type: 'selectLine'; line: number };
+  | { type: 'selectLine'; line: number }
+  /** Answer to 'spellCheck': `bad` are the misspelled ones of `words`. */
+  | { type: 'spellResult'; words: string[]; bad: string[] }
+  | { type: 'spellSuggestions'; word: string; suggestions: string[] };
 
 export type FromWebview =
   | { type: 'ready' }
@@ -29,4 +34,8 @@ export type FromWebview =
   | { type: 'openSource' }
   | { type: 'cleanupImages' }
   | { type: 'revealLine'; line: number }
-  | { type: 'notify'; level: 'info' | 'warn' | 'error'; message: string };
+  | { type: 'notify'; level: 'info' | 'warn' | 'error'; message: string }
+  | { type: 'spellCheck'; words: string[] }
+  | { type: 'spellSuggest'; word: string }
+  /** Add a word to the user's dictionary. */
+  | { type: 'spellAdd'; word: string };

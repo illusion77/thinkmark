@@ -21,12 +21,17 @@
   window.__state = params.get('state') ? JSON.parse(params.get('state')) : undefined;
   const send = (m) => setTimeout(() => window.dispatchEvent(new MessageEvent('message', { data: m })), 0);
   const show = () => { document.getElementById('debug').textContent = window.__doc; };
+  // Stand-in for the extension's spell checker: only these typos are "misspelled".
+  const TYPOS = { teh: ['the', 'ten', 'tea'], wrod: ['word', 'wood'], recieve: ['receive', 'relieve'], desgin: ['design'], latancy: ['latency'], seperate: ['separate'], shortner: ['shortener', 'shorter'], qzxv: [] };
+  const userWords = new Set();
+  const typo = (w) => !userWords.has(w) && Object.hasOwn(TYPOS, w.toLowerCase());
+  const config = () => ({ defaultLayout: params.get('layout') || 'map', defaultTheme: params.get('theme') || 'auto', defaultLineStyle: 'curve', headingLevels: 2, syncSelection: true, spellCheck: !params.get('nospell') });
   window.__external = (text) => { window.__doc = text; show(); send({ type: 'update', text }); };
   window.acquireVsCodeApi = () => ({
     postMessage(m) {
       window.__msgs.push(m);
       if (m.type === 'ready') {
-        const load = (text) => { window.__doc = text; show(); send({ type: 'init', text, baseUri: new URL('./', location.href).toString(), fileName: 'sample', config: { defaultLayout: params.get('layout') || 'map', defaultTheme: params.get('theme') || 'auto', defaultLineStyle: 'curve', headingLevels: 2, syncSelection: true }, lang: params.get('lang') || 'en', canSaveImages: true }); };
+        const load = (text) => { window.__doc = text; show(); send({ type: 'init', text, baseUri: new URL('./', location.href).toString(), fileName: 'sample', config: config(), lang: params.get('lang') || 'en', canSaveImages: true }); };
         if (params.get('empty')) load('');
         else fetch(params.get('file') || 'sample.md').then(r => r.text()).then(load).catch(() => load(window.__sample || ''));
       } else if (m.type === 'edit') {
@@ -36,6 +41,14 @@
         send({ type: 'imageReady', nodeId: m.nodeId, src: 'assets/architecture.svg' });
       } else if (m.type === 'saveImage') {
         send({ type: 'imageReady', nodeId: m.nodeId, src: 'assets/pasted.png' });
+      } else if (m.type === 'spellCheck') {
+        send({ type: 'spellResult', words: m.words, bad: m.words.filter(typo) });
+      } else if (m.type === 'spellSuggest') {
+        const list = TYPOS[m.word.toLowerCase()] || [];
+        send({ type: 'spellSuggestions', word: m.word, suggestions: /^[A-Z]/.test(m.word) ? list.map(s => s[0].toUpperCase() + s.slice(1)) : list });
+      } else if (m.type === 'spellAdd') {
+        userWords.add(m.word);
+        send({ type: 'config', config: config() });
       }
     },
     getState() { return window.__state; },

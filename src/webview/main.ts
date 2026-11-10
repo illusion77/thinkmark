@@ -6,6 +6,7 @@ import { icons, layoutIcons } from './icons';
 import { escapeHtml, renderInline } from './inline';
 import { layoutTree, type Box } from './layout';
 import { anchorOut, branchPath, foldPoint, type LineOpts } from './lines';
+import { addSpellWord, highlightWord, initSpell, markedWordAt, setSpellCheck, spellMarkup, spellResult, spellSuggestions, suggestSpelling, type MarkedWord } from './spell';
 import { hasStyle, setStyle, toggleInline, type InlineStyle } from './format';
 import { handleEditKey, recordChange, resetHistory, trackHistory, type TextField } from './textHistory';
 import { readableOn, resolveTheme, THEMES, withAlpha, type Theme } from './themes';
@@ -94,10 +95,18 @@ app.innerHTML = `
 <aside id="format"></aside>
 <div id="note" class="card"></div>
 <div id="menu" class="card"></div>
+<div id="spelltip" class="card"></div>
 <div id="drop-label"></div>
 <div id="marquee"></div>
 <div id="linkbox" class="card"></div>`;
 trackHistory(app);
+initSpell(app, {
+  post,
+  refresh() {
+    if (S.editing) scheduleRender();
+    decorateNote();
+  },
+});
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const viewport = $<HTMLDivElement>('viewport');
@@ -113,6 +122,7 @@ const statusbar = $<HTMLDivElement>('statusbar');
 const formatEl = $<HTMLElement>('format');
 const noteEl = $<HTMLDivElement>('note');
 const menuEl = $<HTMLDivElement>('menu');
+const tipEl = $<HTMLDivElement>('spelltip');
 const dropLabelEl = $<HTMLDivElement>('drop-label');
 const marqueeEl = $<HTMLDivElement>('marquee');
 const linkEl = $<HTMLDivElement>('linkbox');
@@ -317,6 +327,7 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
   switch (m.type) {
     case 'init':
       S.config = m.config;
+      setSpellCheck(m.config.spellCheck !== false);
       applyTopicWidths();
       S.fileName = m.fileName || 'Mind Map';
       S.baseUri = m.baseUri;
@@ -342,8 +353,10 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
       break;
     case 'config':
       S.config = m.config;
+      setSpellCheck(m.config.spellCheck !== false);
       applyTopicWidths();
       render();
+      decorateNote();
       buildFormat();
       break;
     case 'imageReady': {
@@ -354,6 +367,12 @@ window.addEventListener('message', (e: MessageEvent<ToWebview>) => {
     }
     case 'selectLine':
       selectByLine(m.line);
+      break;
+    case 'spellResult':
+      spellResult(m.words, m.bad);
+      break;
+    case 'spellSuggestions':
+      spellSuggestions(m.word, m.suggestions);
       break;
   }
 });
@@ -428,7 +447,12 @@ function applyTheme(th: Theme) {
     '--ui-hover': dark ? 'rgba(255,255,255,.07)' : 'rgba(17,24,39,.055)',
     '--ui-active': dark ? 'rgba(77,163,255,.18)' : 'rgba(46,140,240,.12)',
     '--ui-shadow': dark ? 'rgba(0,0,0,.45)' : 'rgba(15,23,42,.10)',
+    '--spell': dark ? '#ff6b6b' : '#e5484d',
   };
+  vars['--spell-hot'] = withAlpha(vars['--spell'], dark ? 0.3 : 0.2);
+  // on a topic filled with a color, red would not show: the marks take the text color there
+  vars['--root-spell'] = th.rootBg === 'transparent' ? vars['--spell'] : th.rootFg;
+  vars['--root-spell-hot'] = th.rootBg === 'transparent' ? vars['--spell-hot'] : withAlpha(th.rootFg, 0.28);
   for (const k in vars) st.setProperty(k, vars[k]);
   document.body.style.background = th.bg;
   app.classList.remove('main-filled', 'main-outline', 'main-tint', 'main-underline', 'sub-plain', 'sub-underline', 'dark', 'light');
@@ -470,10 +494,12 @@ function ensureTopic(n: MindNode, depth: number, branch: string, th: Theme): HTM
   }
   const editing = S.editing?.id === n.id;
   const text = editing ? S.editing!.draft : n.text;
-  const key = (editing ? 'E' : 'R') + text;
+  // while editing, the hidden text is a plain copy of the text box that shows only the spelling marks
+  const draft = editing ? spellMarkup(text, editor) : '';
+  const key = editing ? 'E' + draft : 'R' + text;
   if (el.dataset.text !== key) {
     const tEl = el.querySelector('.t-text') as HTMLElement;
-    tEl.innerHTML = editing ? escapeHtml(text) + '&#8203;' : text ? renderInline(text) : '&#8203;';
+    tEl.innerHTML = editing ? draft : text ? renderInline(text) : '&#8203;';
     el.dataset.text = key;
   }
   el.className =
@@ -490,7 +516,9 @@ function ensureTopic(n: MindNode, depth: number, branch: string, th: Theme): HTM
   // a dragged width is the most the topic may take: shorter text keeps it narrower
   el.style.maxWidth = n.width ? `${n.width}px` : '';
   el.style.setProperty('--branch', branch);
-  el.style.setProperty('--branch-fg', th.fillFg === 'auto' ? readableOn(branch) : th.fillFg);
+  const branchFg = th.fillFg === 'auto' ? readableOn(branch) : th.fillFg;
+  el.style.setProperty('--branch-fg', branchFg);
+  el.style.setProperty('--branch-hot', withAlpha(branchFg, 0.28));
   el.style.setProperty('--branch-tint', withAlpha(branch, th.dark ? 0.22 : 0.12));
   return el;
 }
@@ -696,6 +724,7 @@ function focusEditor() {
 }
 
 function resetEditor() {
+  hideSpellTip();
   editor.value = '';
   resetHistory(editor);
   editor.classList.add('sink');
@@ -792,8 +821,9 @@ editor.addEventListener('input', () => {
   const el = topicEls.get(S.editing.id);
   const tEl = el?.querySelector('.t-text') as HTMLElement | null;
   if (el && tEl) {
-    tEl.innerHTML = escapeHtml(S.editing.draft) + '&#8203;';
-    el.dataset.text = 'E' + S.editing.draft;
+    const draft = spellMarkup(S.editing.draft, editor);
+    tEl.innerHTML = draft;
+    el.dataset.text = 'E' + draft;
     positionEditor();
   }
   scheduleRender();
@@ -1063,7 +1093,7 @@ function openNote(id: string | null = S.focus) {
   S.noteId = n.id;
   noteEl.innerHTML = `
     <div class="note-head"><span class="note-ico">${icons.note}</span><span class="note-title">${escapeHtml(n.text || t('note'))}</span><button class="icon-btn" data-act="close" title="${t('done')}">${icons.close}</button></div>
-    <textarea class="note-text" spellcheck="false" placeholder="${escapeHtml(t('notePlaceholder'))}"></textarea>
+    <div class="note-body"><textarea class="note-text" spellcheck="false" placeholder="${escapeHtml(t('notePlaceholder'))}"></textarea><div class="note-marks" aria-hidden="true"></div></div>
     <div class="note-foot"><span>${escapeHtml(t('noteHint').replace('{0}', keyLabel('mod+Enter')))}</span><button class="btn primary" data-act="done">${t('done')}</button></div>`;
   const ta = noteEl.querySelector('textarea')!;
   ta.value = (n.note ?? '').replace(/^(\s*)\\([#\-*+])/gm, '$1$2').replace(/^(\s*\d+)\\([.)])/gm, '$1$2');
@@ -1071,11 +1101,27 @@ function openNote(id: string | null = S.focus) {
   positionNote();
   ta.focus();
   ta.setSelectionRange(ta.value.length, ta.value.length);
+  noteMarkup = '';
+  decorateNote();
+}
+
+let noteMarkup = '';
+/** Draw the marks under the misspelled words of the open note: a transparent copy of its text over the text box. */
+function decorateNote() {
+  const ta = noteEl.querySelector('textarea');
+  const marks = noteEl.querySelector<HTMLElement>('.note-marks');
+  if (!S.noteId || !ta || !marks) return;
+  const html = spellMarkup(ta.value, ta);
+  if (html !== noteMarkup) marks.innerHTML = noteMarkup = html;
+  // same text width as the text box, which gets narrower when it shows a scroll bar
+  marks.style.width = `${ta.clientWidth + ta.clientLeft * 2}px`;
+  marks.scrollTop = ta.scrollTop;
 }
 
 function closeNote(save: boolean) {
   const id = S.noteId;
   if (!id) return;
+  hideSpellTip();
   S.noteId = null;
   const ta = noteEl.querySelector('textarea') as HTMLTextAreaElement | null;
   noteEl.classList.remove('open');
@@ -1110,6 +1156,8 @@ function positionNote() {
 }
 
 noteEl.addEventListener('mousedown', e => e.stopPropagation());
+noteEl.addEventListener('input', decorateNote);
+noteEl.addEventListener('scroll', decorateNote, true);
 noteEl.addEventListener('click', e => {
   const act = (e.target as HTMLElement).closest<HTMLElement>('[data-act]')?.dataset.act;
   if (act === 'close' || act === 'done') closeNote(true);
@@ -1439,6 +1487,143 @@ menuEl.addEventListener('click', e => {
   if (it && it !== '-') it.run();
   if (!typingElsewhere()) focusEditor();
 });
+
+function replaceWord(field: HTMLTextAreaElement, word: MarkedWord, by: string) {
+  if (field.value.slice(word.start, word.end).replace(/’/g, "'") !== word.word) return;
+  recordChange(field, 'other');
+  field.setRangeText(by, word.start, word.end, 'end');
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// ---------------------------------------------------------------- spelling popover
+
+/** The mouse has to rest on a marked word this long for its popover to show. */
+const TIP_SHOW_MS = 300;
+/** After the mouse leaves the word, the popover stays this long: time to move onto it. */
+const TIP_HIDE_MS = 250;
+/** How many replacements the popover offers: the most likely ones. */
+const TIP_WORDS = 2;
+
+/** The marked word under the mouse, with its replacements once the extension has answered. */
+interface SpellTip {
+  field: HTMLTextAreaElement;
+  word: MarkedWord;
+  list?: string[];
+  rested: boolean;
+}
+let tip: SpellTip | null = null;
+let tipShowTimer = 0;
+let tipHideTimer = 0;
+const tipOpen = () => tipEl.classList.contains('open');
+
+/** The mouse moved over a text box; `layer` holds that box's spelling marks. */
+function hoverSpelling(field: HTMLTextAreaElement, layer: Element | null | undefined, e: MouseEvent) {
+  const word = e.buttons ? null : markedWordAt(layer, e.clientX, e.clientY);
+  if (!word) return leaveSpelling();
+  clearTimeout(tipHideTimer);
+  tipHideTimer = 0;
+  if (tip && tip.field === field && tip.word.start === word.start && tip.word.word === word.word) return;
+  hideSpellTip();
+  const now: SpellTip = { field, word, rested: false };
+  tip = now;
+  // asked right away, so that the answer is usually there when the popover is due
+  suggestSpelling(word.word, list => {
+    if (tip !== now) return;
+    now.list = list;
+    showSpellTip();
+  });
+  tipShowTimer = window.setTimeout(() => {
+    if (tip !== now) return;
+    now.rested = true;
+    showSpellTip();
+  }, TIP_SHOW_MS);
+}
+
+/** The mouse is no longer on the marked word. */
+function leaveSpelling() {
+  if (!tip || tipHideTimer) return;
+  if (!tipOpen()) return hideSpellTip();
+  tipHideTimer = window.setTimeout(hideSpellTip, TIP_HIDE_MS);
+}
+
+/**
+ * Once the mouse has rested on the word: highlight it and list its replacements under it, one per
+ * line, with "Add to Dictionary" last (alone when there is no replacement).
+ */
+function showSpellTip() {
+  if (!tip?.rested || !tip.list || tipOpen()) return;
+  const word = tip.word;
+  const list = tip.list.slice(0, TIP_WORDS);
+  tipEl.innerHTML =
+    list.map((s, i) => `<button data-i="${i}">${escapeHtml(s)}</button>`).join('') +
+    (list.length ? '<div class="st-sep"></div>' : '') +
+    `<button class="st-add" data-act="add">${escapeHtml(t('addToDictionary'))}</button>`;
+  tipEl.classList.add('open');
+  highlightWord(tip.field, word);
+  const r = viewport.getBoundingClientRect();
+  const w = tipEl.offsetWidth;
+  const h = tipEl.offsetHeight;
+  // the words line up with the marked word; above it when there is no room below
+  const below = word.bottom - r.top + 4;
+  const above = word.top - r.top - 4 - h;
+  tipEl.style.left = `${Math.max(8, Math.min(word.left - r.left - 15, r.width - w - 8))}px`;
+  tipEl.style.top = `${below + h <= r.height - 8 || above < 8 ? Math.min(below, r.height - h - 8) : above}px`;
+}
+
+function hideSpellTip() {
+  clearTimeout(tipShowTimer);
+  clearTimeout(tipHideTimer);
+  tipHideTimer = 0;
+  tip = null;
+  tipEl.classList.remove('open');
+  highlightWord(null);
+}
+
+editor.addEventListener('mousemove', e => {
+  if (S.editing) hoverSpelling(editor, topicEls.get(S.editing.id), e);
+});
+editor.addEventListener('mouseleave', leaveSpelling);
+noteEl.addEventListener('mousemove', e => {
+  const ta = noteEl.querySelector('textarea');
+  if (ta && e.target === ta) hoverSpelling(ta, noteEl.querySelector('.note-marks'), e);
+  else leaveSpelling();
+});
+noteEl.addEventListener('mouseleave', leaveSpelling);
+
+// a press on the popover must not take the focus out of the text box
+tipEl.addEventListener('mousedown', e => stop(e));
+tipEl.addEventListener('mouseenter', () => {
+  clearTimeout(tipHideTimer);
+  tipHideTimer = 0;
+});
+tipEl.addEventListener('mouseleave', leaveSpelling);
+tipEl.addEventListener('click', e => {
+  const button = (e.target as HTMLElement).closest('button');
+  const shown = tip;
+  if (!button || !shown?.list) return;
+  hideSpellTip();
+  if (button.dataset.act === 'add') addSpellWord(shown.word.word);
+  else replaceWord(shown.field, shown.word, shown.list[Number(button.dataset.i)]);
+});
+
+// anything else the user does puts the popover away; Esc does only that, the edit goes on
+app.addEventListener(
+  'keydown',
+  e => {
+    const open = tipOpen();
+    hideSpellTip();
+    if (open && e.key === 'Escape') stop(e);
+  },
+  true,
+);
+for (const type of ['input', 'wheel', 'scroll']) app.addEventListener(type, hideSpellTip, { capture: true, passive: true });
+app.addEventListener(
+  'mousedown',
+  e => {
+    if (!tipEl.contains(e.target as Node)) hideSpellTip();
+  },
+  true,
+);
 
 function topicMenu(id: string): MenuItem[] {
   const n = node(id)!;

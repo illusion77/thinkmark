@@ -85,6 +85,7 @@ const en = {
   deleteN: 'Delete {0} Topics',
   selectedN: '{0} selected',
   foldToggle: 'Collapse / Expand',
+  addToDictionary: 'Add to Dictionary',
 };
 
 type Dict = typeof en;
@@ -176,6 +177,7 @@ const zh: Dict = {
   deleteN: '删除 {0} 个主题',
   selectedN: '已选中 {0} 个',
   foldToggle: '折叠 / 展开',
+  addToDictionary: '添加到词典',
 };
 
 let dict: Dict = en;

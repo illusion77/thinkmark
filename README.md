@@ -18,6 +18,7 @@ The `.md` file stays the source of truth. Every change you make in the map (addi
 - **Box selection** and group actions: move, delete, copy, fold, link or tick several topics at once.
 - **Images** inside topics: insert from a file, paste a screenshot, drop a file, resize by dragging.
 - **Notes, task checkboxes, links** (`Cmd+K`) and inline formatting (bold, italic, code, links).
+- **Spell check** for English while you edit a topic or a note, with suggestions and your own word list. It works offline.
 - **Structures:** mind map, logic chart (right or left) and org chart. **Themes:** Rainbow, Fresh, Business, Ink, Midnight, or Auto to follow VS Code's light / dark theme. Curved, elbow or straight branch lines.
 - **Side-by-side source:** the selected topic and the cursor in the Markdown editor follow each other.
 - English and Simplified Chinese interface.
@@ -131,6 +132,12 @@ Shortcuts are shown for macOS. On Windows and Linux, use `Ctrl` instead of `Cmd`
 
 Right-click a topic, an image, a selection or the background for more commands.
 
+### Spell check
+
+While you edit a topic or a note, misspelled English words get a wavy underline (the word you are typing is checked once you move on). Rest the mouse on an underlined word and a small popover lists the likely spellings; click one to replace the word. **Add to Dictionary**, the last entry of the popover, accepts the word from now on; those words are kept in the setting `thinkmark.spellCheck.userWords`.
+
+The dictionary is American English plus common software terms, and it is part of the extension: nothing you type leaves your machine. Code, links, file names, ACRONYMS, ProductNames, words with digits and text in other languages are not checked. Turn the feature off with `thinkmark.spellCheck.enabled`.
+
 ### Drag and drop
 
 Drag a topic near another topic and four arrows appear around it. The highlighted arrow decides where the topic goes, and a placeholder previews the result:
@@ -171,6 +178,8 @@ Dropping onto the topic itself also makes it a subtopic. Next to the central top
 | `thinkmark.topicMaxWidth.mainTopics` | `32` | Same for the main topics |
 | `thinkmark.topicMaxWidth.subtopics` | `44` | Same for all deeper topics |
 | `thinkmark.syncSelection` | `true` | Keep the selected topic and the cursor in a side-by-side Markdown editor in sync |
+| `thinkmark.spellCheck.enabled` | `true` | Underline misspelled English words while editing a topic or a note |
+| `thinkmark.spellCheck.userWords` | `[]` | Words the spell checker accepts in addition to its dictionary; a lower-case word also covers its capitalized form |
 
 ## Development
 
@@ -178,7 +187,7 @@ Dropping onto the topic itself also makes it a subtopic. Next to the central top
 npm install
 npm run build          # extension and webview bundles
 npm run watch          # rebuild on change
-npm test               # unit tests (parser, serializer, text diff)
+npm test               # unit tests (parser, serializer, text diff, spell check)
 npm run harness        # the webview in a browser with a mocked VS Code API: dev/harness.html
 npm run test:vscode    # smoke test in an isolated VS Code window (macOS)
 npm run package        # build thinkmark-<version>.vsix
@@ -191,7 +200,10 @@ Project layout:
 - `src/shared/markdown.ts` converts between Markdown and the topic tree.
 - `src/mindmapEditor.ts` is the custom text editor that keeps the document and the webview in sync.
 - `src/webview/` contains the map: layout, branch drawing, themes and interaction.
+- `src/spell/` is the spell checker, which runs in the extension because VS Code turns off the browser's own in webviews; `src/webview/spell.ts` draws its marks.
 
 ## License
 
 [MIT](LICENSE)
+
+Spell checking uses [nspell](https://github.com/wooorm/nspell) (MIT) and the en-US Hunspell dictionary from [SCOWL](http://wordlist.aspell.net) (MIT and BSD), packaged as [dictionary-en](https://github.com/wooorm/dictionaries). Their license texts ship with the extension in `dist/THIRD-PARTY-LICENSES.txt`.
