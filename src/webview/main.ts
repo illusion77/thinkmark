@@ -1437,7 +1437,7 @@ menuEl.addEventListener('click', e => {
   const it = menuItems[+el.dataset.i!];
   closeMenu();
   if (it && it !== '-') it.run();
-  focusEditor();
+  if (!typingElsewhere()) focusEditor();
 });
 
 function topicMenu(id: string): MenuItem[] {
