@@ -2,7 +2,7 @@
   "name": "thinkmark",
   "displayName": "Thinkmark — Markdown Mind Map",
   "description": "Edit Markdown files as XMind-style mind maps. The Markdown file stays the source of truth: changes in the map are written back to the text, and changes to the text show up in the map.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "illusion77",
   "license": "MIT",
   "repository": {
