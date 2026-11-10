@@ -160,7 +160,9 @@ button {
   padding: 13px 24px;
   font-size: 22px;
   font-weight: 600;
-  background: var(--root-bg);
+  /* The fill lies over the canvas color: in a mind map the branches start at the center of this topic,
+     and a transparent fill (Ink) would let them show through its text. */
+  background: linear-gradient(var(--root-bg), var(--root-bg)) var(--bg);
   color: var(--root-fg);
   border: 2px solid var(--root-border);
   border-radius: 10px;
