@@ -45,7 +45,7 @@ git clone https://github.com/illusion77/thinkmark.git
 cd thinkmark
 npm install
 npm run package
-code --install-extension thinkmark-0.1.0.vsix
+code --install-extension thinkmark-*.vsix
 ```
 
 ## Usage
